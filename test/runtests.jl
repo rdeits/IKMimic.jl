@@ -24,7 +24,7 @@ using RigidBodyDynamics
             rand!(state2)
             set_configuration!(state2,
                 clamp.(configuration(state2), bounds))
-            for i in 1:10
+            for j in 1:10
                 IKMimic.ik_mimic!(state2, state1, matching_bodies)
             end
             @test Vector(state2) ≈ Vector(state1) rtol=5e-3
@@ -41,7 +41,7 @@ using RigidBodyDynamics
             set_configuration!(state2,
                 clamp.(configuration(state2), bounds))
             work = IKMimic.IKMimicWorkspace(state1, state2, matching_bodies)
-            for i in 1:10
+            for j in 1:10
                 IKMimic.ik_mimic!(state2, state1, work)
             end
             @test Vector(state2) ≈ Vector(state1) rtol=5e-3
@@ -49,6 +49,28 @@ using RigidBodyDynamics
         end
     end
 
-    # @testset "
+    @testset "sensitivity" begin
+        srand(1)
+        for i in 1:10
+            rand!(state1)
+            set_configuration!(state1,
+                clamp.(configuration(state1), bounds))
+            rand!(state2)
+            set_configuration!(state2,
+                clamp.(configuration(state2), bounds))
+            work = IKMimic.IKMimicWorkspace(state1, state2, matching_bodies)
+            for j in 1:10
+                IKMimic.ik_mimic!(state2, state1, work)
+            end
+            J = IKMimic.sensitivity(work)
+            @test J ≈ eye(size(J)...) rtol=1e-3
+            x1 = copy(Vector(state1))
+            x2 = copy(Vector(state2))
+            dx = 1e-5 .* randn(length(x1))
+            copy!(state1, x2 .+ dx)
+            IKMimic.ik_mimic!(state2, state1, work)
+            @test Vector(state2) ≈ x2 .+ J * dx rtol=2e-5
+        end
+    end
 end
 
